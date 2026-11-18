@@ -9,13 +9,13 @@ encarga a **Claude Code**, que corre en un *worker* aparte dentro de un contened
 
 ## Lo que hace
 
-- 📅 **Google Calendar, Gmail y Classroom** (OAuth2): "¿qué me falta entregar?", "mándale la tarea al profe".
-- 🧠 **Memoria** en SQLite: recuerda lo importante y escribe un diario con una reflexión semanal.
-- 🎙️ **Voz**: entiende notas de voz (Whisper) y contesta con voz (TTS).
-- 🖨️ **Impresora** por CUPS: "imprime la tarea a color, 2 copias".
-- 💼 **Búsqueda de empleo**: encuentra vacantes, arma CVs a la medida con un botón y avisa cuando un reclutador responde.
-- 💸 **Dinero**: registra gastos y consulta saldos de mi API de finanzas.
-- 🕰️ **Iniciativa propia**: rutina diaria, recordatorios y mensajes cuando hay un motivo real (no spam).
+- **Google Calendar, Gmail y Classroom** (OAuth2): "¿qué me falta entregar?", "mándale la tarea al profe".
+- **Memoria** en SQLite: recuerda lo importante y escribe un diario con una reflexión semanal.
+- **Voz**: entiende notas de voz (Whisper) y contesta con voz (TTS).
+- **Impresora** por CUPS: "imprime la tarea a color, 2 copias".
+- **Búsqueda de empleo**: encuentra vacantes, arma CVs a la medida con un botón y avisa cuando un reclutador responde.
+- **Dinero**: registra gastos y consulta saldos de mi API de finanzas.
+- **Iniciativa propia**: rutina diaria, recordatorios y mensajes cuando hay un motivo real (no spam).
 
 ## Cómo está hecho
 
