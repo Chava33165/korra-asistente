@@ -1,0 +1,7 @@
+.env
+secrets/
+__pycache__/
+*.pyc
+estadisticas/*.json
+vigilante/estado.json
+vigilante/vigilante.log

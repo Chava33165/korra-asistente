@@ -1,0 +1,88 @@
+# Asistente de Telegram (DeepSeek → Claude Code).
+#
+# Ningún servicio publica puertos: el bot habla con Telegram hacia fuera (long polling).
+
+x-hardening: &hardening
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  bot:
+    <<: *hardening
+    build: ./bot
+    env_file: .env
+    environment:
+      WORKER_URL: http://worker:8000
+      WORKSPACE: /workspace
+      JARVIS_DIR: /jarvis
+      CREACIONES_DIR: /creaciones
+      TZ: America/Mexico_City
+      CUPS_SERVER: /run/cups/cups.sock   # imprime con el CUPS de la Pi (sin abrirlo a la red)
+      ESTADISTICAS_DIR: /estadisticas
+    volumes:
+      - "${CETI_DIR:?}:/workspace"
+      - "${JARVIS_DIR:?}:/jarvis"   # su espacio propio (~/KORRA): memoria, notas, diario, recordatorios
+      - "${PERSONAL_DIR:?}:/jarvis/archivos"   # ~/Documentos/Personal: por dentro sigue siendo JARVIS/archivos
+      - "${CREACIONES_DIR:?}:/creaciones"      # ~/Documentos/Creaciones: videos, diseños y presentaciones
+      - /run/cups:/run/cups          # socket de CUPS del host → impresora HP Smart Tank
+      - bot-data:/data
+      - ./estadisticas:/estadisticas  # resumen de uso que lee (solo lectura) la pestaña KORRA del homelab-dashboard
+      - ./secrets:/secrets:ro        # google_client.json (OAuth de Google Cloud)
+      # Lo escriben scripts del host (respaldo.sh y el vigilante); KORRA solo lo lee para /respaldos y /servidor.
+      - ../icloud-respaldo/estado:/estado/icloud:ro
+      - ./vigilante:/estado/vigilante:ro
+      # Sesiones de Claude Code para el iPhone: el bot deja solicitudes en el buzón y el lanzador del host las atiende.
+      - ../claude-remoto:/remoto:ro
+      - ../claude-remoto/buzon:/remoto/buzon
+    networks: [interna]
+    mem_limit: 384m   # audios + Google + DeepSeek; con 256m iba al 75 %
+    depends_on: [worker]
+
+  worker:
+    <<: *hardening
+    build: ./worker
+    environment:
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN:?}"
+      CLAUDE_MODEL: "${CLAUDE_MODEL:-}"
+      JOB_TIMEOUT_S: "${JOB_TIMEOUT_S:-1200}"
+      WORKSPACE: /workspace
+      CREACIONES: /creaciones
+      # .claude.json dentro del volumen claude-home (fuera de él se perdía cada vez que se recreaba el worker)
+      CLAUDE_CONFIG_DIR: /home/node/.claude
+      npm_config_cache: /data/npm-cache   # que el npm install de Remotion/HyperFrames no baje todo cada vez
+      PLUGINS_DIR: "${CLAUDE_GLOBAL_DIR:?}/plugins"
+      TZ: America/Mexico_City   # sin esto Claude ve la hora en UTC
+    volumes:
+      - "${CETI_DIR:?}:/workspace"
+      - "${JARVIS_DIR:?}:/jarvis"    # espacio de KORRA (~/KORRA)
+      - "${PERSONAL_DIR:?}:/jarvis/archivos"   # ~/Documentos/Personal: aquí Claude organiza tus archivos
+      - "${CREACIONES_DIR:?}:/creaciones"      # ~/Documentos/Creaciones: videos, diseños y presentaciones
+      - claude-home:/home/node/.claude
+      - worker-data:/data
+      # Skills GLOBALES de la Pi (~/.claude/skills son symlinks a ~/.agents/skills): lectura y escritura, para
+      # que `npx skills add … -g` desde Telegram las instale para todos (este Claude y el de la terminal).
+      - "${CLAUDE_GLOBAL_DIR:?}/skills:/home/node/.claude/skills"
+      - "${AGENTS_DIR:?}:/home/node/.agents"
+      # Plugins de la Pi, en su misma ruta (installed_plugins.json guarda rutas absolutas), solo lectura.
+      - "${CLAUDE_GLOBAL_DIR:?}/plugins:${CLAUDE_GLOBAL_DIR:?}/plugins:ro"
+      # Skills de documentos sincronizadas de tu cuenta (solo lectura).
+      - "${SKILLS_DIR:?}/docx:/home/node/.claude/skills/docx:ro"
+      - "${SKILLS_DIR:?}/pdf:/home/node/.claude/skills/pdf:ro"
+      - "${SKILLS_DIR:?}/pptx:/home/node/.claude/skills/pptx:ro"
+      - "${SKILLS_DIR:?}/xlsx:/home/node/.claude/skills/xlsx:ro"
+      - "${SKILLS_DIR:?}/deep-research:/home/node/.claude/skills/deep-research:ro"
+    networks: [interna]
+    mem_limit: 1200m
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 5s
+
+networks:
+  interna: {}        # bot ↔ worker (ambos necesitan salir a internet: Telegram, DeepSeek, Anthropic)
+
+volumes:
+  bot-data:
+  worker-data:
+  claude-home:
